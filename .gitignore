@@ -1,0 +1,19 @@
+# Verilator build artifacts
+obj_*/
+*.vcd
+*.fst
+*.log
+
+# Yosys outputs
+*.json
+synth.v
+
+# Firmware build artifacts
+fw/*.elf
+fw/*.bin
+fw/*.map
+fw/*.o
+rtl/rom.hex
+
+# OpenLane
+openlane_design/runs/

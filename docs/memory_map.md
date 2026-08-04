@@ -1,0 +1,4 @@
+# Memory Map
+- ROM: 0x00000000
+- SRAM: 0x00010000
+- UART: 0x10000000
