@@ -38,6 +38,7 @@ module tb_top;
       end
       #(BIT_TIME); // Stop bit
       $write("%c", rx_byte);
+      $fflush();
     end
   end
 endmodule
