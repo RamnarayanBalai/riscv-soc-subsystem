@@ -15,6 +15,13 @@ soc: fw
 synth:
 	yosys -D SYNTHESIS -p 'synth -top top' $(RTL)/picorv32.v $(RTL)/top.v $(RTL)/axi_lite_interconnect.v $(RTL)/axi_decoder.v $(RTL)/rom.v $(RTL)/sram.v $(RTL)/uart_axi.v $(RTL)/uart_tx.v $(RTL)/uart_rx.v
 
+run_flow:
+	cd openlane_design && openlane --interactive -file flow_commands.tcl
+
+pull:
+	git fetch origin
+	git pull origin master
+
 clean:
-	rm -rf obj_dir *.vcd *.fst
+	rm -rf obj_dir *.vcd *.fst runs/ openlane_design/runs/
 	$(MAKE) -C $(FW) clean
