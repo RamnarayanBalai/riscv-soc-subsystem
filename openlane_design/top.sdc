@@ -2,7 +2,7 @@ create_clock -period 20 -name clk [get_ports clk]
 set_clock_uncertainty 0.25 [get_clocks clk]
 set_clock_transition 0.25 [get_clocks clk]
 
-set_driving_cell -lib_cell sky130_fd_sc_hd_clkbuf_16 -pin X [get_ports clk]
+set_driving_cell -lib_cell sky130_fd_sc_hd__clkbuf_16 -pin X [get_ports clk]
 
 set_input_delay -min-rise 0.0 [get_ports {reset uart_rx}] -clock clk
 set_input_delay -min-fall 0.0 [get_ports {reset uart_rx}] -clock clk
