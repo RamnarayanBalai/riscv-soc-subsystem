@@ -791,26 +791,137 @@ Checking module axi_lite_interconnect...
 Found and reported 0 problems.
 ```
 
-### OpenLane successful run (expected):
+### OpenLane Physical Design Flow — Successful Run Log
+
+**Run:** `RUN_2026.08.05_14.01.30` | **OpenLane:** v1.0.2 | **PDK:** sky130A | **Std Cell Library:** sky130_fd_sc_hd
+
+The complete flow executed **45 steps** from RTL to GDSII:
+
 ```
-[STEP 1]  Running Synthesis...
-[STEP 2]  Running Single-Corner Static Timing Analysis...
-[STEP 3]  Running Initial Floorplanning...
-[STEP 4]  Running IO Placement...
-[STEP 5]  Running PDN Generation...
-[STEP 6]  Running Global Placement...
-[STEP 7]  Running Detailed Placement...
-[STEP 8]  Running CTS...
-[STEP 9]  Running Global Routing...
-[STEP 10] Running Detailed Routing...
-[STEP 11] Running SPICE Extraction...
-[STEP 12] Running DRC (Magic)...
-[STEP 13] Running LVS (Netgen)...
-[STEP 14] Running Antenna Check...
-[INFO]: Flow completed successfully.
+[STEP 1]  Running Synthesis                                          ✅
+[STEP 2]  Running Single-Corner Static Timing Analysis               ✅
+[STEP 3]  Running Initial Floorplanning                              ✅  (988.54 µm × 976.48 µm)
+[STEP 4]  Running IO Placement                                      ✅
+[STEP 5]  Running Tap/Decap Insertion                                ✅
+[STEP 6]  Generating PDN (Power: VPWR, Ground: VGND)                ✅
+[STEP 7]  Running Global Placement                                   ✅
+[STEP 8]  Running Single-Corner STA (post-global-placement)         ✅
+[STEP 9]  Running Placement Resizer Design Optimizations             ✅
+[STEP 10] Running Detailed Placement                                 ✅
+[STEP 11] Running Single-Corner STA (post-detailed-placement)       ✅
+[STEP 12] Running Clock Tree Synthesis (CTS)                         ✅
+[STEP 13] Running Single-Corner STA (post-CTS)                      ✅
+[STEP 14] Running Placement Resizer Timing Optimizations             ✅
+[STEP 15] Running Global Routing Resizer Design Optimizations        ✅
+[STEP 16] Running Single-Corner STA (post-resizer-design)           ✅
+[STEP 17] Running Global Routing Resizer Timing Optimizations        ✅
+[STEP 18] Running Single-Corner STA (post-resizer-timing)           ✅
+[STEP 19] Running I/O Diode Insertion                                ✅
+[STEP 20] Running Detailed Placement (post-IO-diode legalization)    ✅
+[STEP 21] Running Heuristic Diode Insertion                          ✅
+[STEP 22] Running Detailed Placement (post-diode legalization)       ✅
+[STEP 23] Running Global Routing                                     ✅  (1 antenna violation, non-critical)
+[STEP 24] Writing Verilog (post-global-route netlist)                ✅
+[STEP 25] Running Single-Corner STA (post-global-route)             ✅
+[STEP 26] Running Fill Insertion                                     ✅
+[STEP 27] Running Detailed Routing                                   ✅  (No DRC violations)
+[STEP 28] Checking Wire Lengths                                      ✅
+[STEP 29] Running SPEF Extraction (min corner)                       ✅
+[STEP 30] Running Multi-Corner STA (min corner)                      ✅
+[STEP 31] Running SPEF Extraction (max corner)                       ✅
+[STEP 32] Running Multi-Corner STA (max corner)                      ✅
+[STEP 33] Running SPEF Extraction (nom corner)                       ✅
+[STEP 34] Running Multi-Corner STA (nom corner)                      ✅
+[STEP 35] Running Single-Corner STA (nom corner, final)              ✅
+[STEP 36] Creating IR Drop Report                                    ✅
+[STEP 37] Streaming out GDSII with Magic                             ✅
+[STEP 38] Streaming out GDSII with KLayout                           ⚠️  (KLayout GDS XOR skipped)
+[STEP 39] Running Magic Spice Export from LEF                        ✅
+[STEP 40] Writing Powered Verilog                                    ✅
+[STEP 41] Writing Verilog (final netlist)                             ✅
+[STEP 42] Running LVS (Layout vs. Schematic)                         ✅
+[STEP 43] Running Magic DRC                                          ✅  (No DRC violations after GDS streaming)
+[STEP 44] Running OpenROAD Antenna Rule Checker                      ✅
+[STEP 45] Running Circuit Validity Checker ERC                       ✅
+
+[SUCCESS]: Flow complete.
 ```
 
-**Output artifacts:** The final GDSII layout file will be at:
+### Signoff Results Summary
+
+| Check | Result | Details |
+|:------|:-------|:--------|
+| **Setup Timing** | ✅ **No violations** | All paths meet setup constraints at typical corner |
+| **Hold Timing** | ✅ **No violations** | All paths meet hold constraints at typical corner |
+| **Max Slew** | ✅ **No violations** | All transitions within 1.5 ns limit |
+| **Max Fanout** | ✅ **No violations** | All nets within fanout constraint of 8 |
+| **Max Capacitance** | ✅ **No violations** | All loads within 0.5 pF limit |
+| **DRC (post-routing)** | ✅ **No violations** | Clean after detailed routing (Step 27) |
+| **DRC (post-GDS)** | ✅ **No violations** | Clean after GDSII streaming (Step 43) |
+| **LVS** | ✅ **Pass** | Layout matches schematic (Step 42) |
+| **Antenna** | ✅ **Pass** | Antenna rule check clean (Step 44) |
+| **ERC** | ✅ **Pass** | Electrical rule check clean (Step 45) |
+
+### Floorplan Dimensions
+
+| Parameter | Value |
+|:----------|:------|
+| Die Area (configured) | 1000 µm × 1000 µm = 1 mm² |
+| Core Area (actual) | 988.54 µm × 976.48 µm |
+| Core Utilization | 35% target |
+| Placement Density | 65% target |
+| Power Network | VPWR / VGND, stripe pitch 25 µm × 25 µm |
+| Max Routing Layer | met4 |
+
+### Multi-Corner STA
+
+The design was verified at **three process corners** after parasitic extraction (SPEF):
+- **min** corner (fast process, low voltage, low temperature) — Steps 29–30
+- **max** corner (slow process, high voltage, high temperature) — Steps 31–32
+- **nom** corner (nominal process, nominal voltage, nominal temperature) — Steps 33–35
+
+All corners passed with **zero timing violations**.
+
+### Non-Critical Warnings (Safe to Ignore)
+
+| Warning | Explanation |
+|:--------|:------------|
+| `63 warnings found by linter` | Verilator linter warnings from the third-party PicoRV32 core (unused signals, blocking assignments). Does not affect synthesis or functionality. |
+| `Module sky130_fd_sc_hd__tapvpwrvgnd_1 blackboxed during sta` | Tap/decap/fill cells are physical-only cells with no logical function. OpenSTA correctly blackboxes them. |
+| `Module sky130_ef_sc_hd__decap_12 blackboxed during sta` | Same as above — decoupling capacitor cell. |
+| `Module sky130_fd_sc_hd__fill_1 blackboxed during sta` | Same as above — fill cell for density. |
+| `Module sky130_fd_sc_hd__fill_2 blackboxed during sta` | Same as above — fill cell for density. |
+| `VSRC_LOC_FILES is not defined` | No voltage source location file provided for IR drop analysis. Results are approximate but the flow still completes. |
+| `top.klayout.gds wasn't found. Skipping GDS XOR` | KLayout GDSII export failed (proot limitation). Magic GDSII export (Step 37) succeeded, which is the primary output. |
+| `DIODE_INSERTION_STRATEGY is now deprecated` | Legacy config key auto-converted to `GRT_REPAIR_ANTENNAS=1`. No action needed. |
+
+### Output Artifacts
+
+After a successful run, the following key files are generated:
+
 ```
-openlane_design/runs/RUN_<timestamp>/results/final/gds/top.gds
+openlane_design/runs/RUN_<timestamp>/
+├── results/final/
+│   ├── gds/
+│   │   └── top.gds              ← GDSII layout (send to foundry)
+│   ├── lef/
+│   │   └── top.lef              ← Library Exchange Format (for hierarchical integration)
+│   ├── def/
+│   │   └── top.def              ← Design Exchange Format (placed & routed layout)
+│   ├── verilog/
+│   │   └── top.v                ← Gate-level netlist (post-synthesis)
+│   ├── sdf/
+│   │   └── top.sdf              ← Standard Delay Format (for gate-level simulation)
+│   └── spef/
+│       └── top.spef             ← Parasitic extraction data
+├── reports/
+│   ├── manufacturability.rpt    ← DRC/LVS/Antenna summary
+│   └── metrics.csv              ← Area, timing, power metrics
+└── logs/
+    ├── synthesis/               ← Yosys + STA logs
+    ├── floorplan/               ← Floorplan + IO + PDN logs
+    ├── placement/               ← Global/Detailed placement logs
+    ├── cts/                     ← Clock tree synthesis logs
+    ├── routing/                 ← Global/Detailed routing logs
+    └── signoff/                 ← DRC, LVS, Antenna, SPICE, GDSII logs
 ```
