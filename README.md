@@ -73,3 +73,44 @@ The firmware utilizes a custom linker script (`fw/link.ld`) to map `.text` secti
 ## ASIC Physical Design
 
 The `openlane_design/config.json` file contains the initial floorplanning and placement parameters required to run this design through the OpenLane flow (target: SkyWater 130nm PDK).
+
+## Debugging Journey & Fixes
+
+During the development and integration of this SoC, several deeply nested embedded systems bugs were encountered and resolved. These are documented here for educational purposes:
+
+1. **Custom AXI Bridge Deadlock (`top.v`):** The custom AXI Bridge state machine was originally issuing duplicate read transactions for the same address if the CPU held `cpu_mem_valid` high while waiting for `ready_r`. This trapped the CPU in an infinite loop, constantly fetching the first instruction (`lui sp`) and never advancing the program counter. A check (`!ready_r`) was added to the `IDLE` state transition to fix this logic.
+2. **Missing Linker Sections (`.srodata`):** RISC-V GCC compiled the string literal `"Hello Ramnarayan\n"` into the `.srodata` (Small Read-Only Data) section due to `-Os` optimizations. Because `link.ld` did not explicitly map `*(.srodata*)` into the `ROM`, the linker placed it outside of ROM. It was silently skipped during hex generation, resulting in an empty string and no output. The linker script was updated to properly map all standard RISC-V sections.
+3. **Missing `"ax"` Flags:** The boot code (`start.S`) was defined with a custom section `.section .text.start`. Without explicitly passing the `"ax"` (Allocatable, Executable) flags, `GNU Assembler` treated it as non-allocatable data, and `objcopy` stripped it from the final binary. This caused the CPU to boot directly into `main()`, which crashed on an uninitialized stack.
+4. **Verilator Monitor Buffering:** The testbench's UART monitor (`$write`) lacked an explicit `$fflush()`, causing characters to occasionally get trapped in standard output buffers on some systems without displaying. Added `$fflush()` to force terminal updates.
+
+## Expected Outputs
+
+When running `make soc`, the output should trace the compilation steps, run the Verilated model, and print the greeting continuously (as dictated by the program loop):
+
+```text
+./obj_dir/Vtb_top +romhex=rtl/rom.hex
+--------------------------------------------------
+ UART SoC Simulation Started
+--------------------------------------------------
+Hello Ramnarayan
+Hello Ramnarayan
+Hello Ramnarayan
+...
+TEST PASSED (time limit reached)
+```
+
+When running `make synth`, Yosys will successfully analyze the design hierarchy without structural loop or syntax errors:
+
+```text
+11. Executing CHECK pass (checking for obvious problems).
+Checking module picorv32...
+Checking module rom...
+Checking module sram...
+Checking module top...
+Checking module uart_axi...
+Checking module uart_rx...
+Checking module uart_tx...
+Checking module axi_decoder...
+Checking module axi_lite_interconnect...
+Found and reported 0 problems.
+```
