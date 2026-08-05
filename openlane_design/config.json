@@ -1,7 +1,7 @@
 {
   "DESIGN_NAME": "top",
   "VERILOG_FILES": "dir::../rtl/*.v",
-  "VERILOG_DEFINES": ["SYNTHESIS", "ROM_HEX_PATH=\"/home/lab-user/riscv-soc-subsystem/rtl/rom.hex\""],
+  "VERILOG_DEFINES": "SYNTHESIS",
   "RUN_CTS": true,
   "CLOCK_PERIOD": 20,
   "CLOCK_PORT": "clk",

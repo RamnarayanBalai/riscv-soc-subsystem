@@ -8,8 +8,8 @@ module rom (
 );
   reg [31:0] mem [0:2047];
   
-`ifdef ROM_HEX_PATH
-  initial $readmemh(`ROM_HEX_PATH, mem);
+`ifdef SYNTHESIS
+  initial $readmemh("/home/lab-user/riscv-soc-subsystem/rtl/rom.hex", mem);
 `else
   initial $readmemh("rtl/rom.hex", mem);
 `endif
