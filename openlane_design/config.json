@@ -1,7 +1,7 @@
 {
   "DESIGN_NAME": "top",
   "VERILOG_FILES": "dir::../rtl/*.v",
-  "VERILOG_DEFINES": "SYNTHESIS",
+  "VERILOG_DEFINES": ["SYNTHESIS", "ROM_HEX_PATH=\"/home/lab-user/riscv-soc-subsystem/rtl/rom.hex\""],
   "RUN_CTS": true,
   "CLOCK_PERIOD": 20,
   "CLOCK_PORT": "clk",
@@ -62,10 +62,5 @@
   "RUN_LVS": 1,
   "RUN_ANTENNA_CHECK": 1,
   "RUN_SPICE_EXTRACTION": 1,
-  "IO_PCT": 0.2,
-  "VDD_NETS": "VPWR",
-  "GND_NETS": "VGND",
-  "SYNTH_USE_PG_PINS_DEFINES": "USE POWER PINS",
-  "FP_PDN_CORE_RING": 0,
-  "RUN_IRDROP_REPORT": 0
+  "IO_PCT": 0.2
 }

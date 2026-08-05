@@ -8,7 +8,9 @@ module rom (
 );
   reg [31:0] mem [0:2047];
   
-`ifndef SYNTHESIS
+`ifdef ROM_HEX_PATH
+  initial $readmemh(`ROM_HEX_PATH, mem);
+`else
   initial $readmemh("rtl/rom.hex", mem);
 `endif
 
