@@ -50,7 +50,7 @@ module top (
       ready_r <= 0;
       case (b_state)
         0: begin // IDLE
-          if (cpu_mem_valid) begin
+          if (cpu_mem_valid && !ready_r) begin
             if (|cpu_mem_wstrb) begin
               m_axi_awaddr <= cpu_mem_addr; m_axi_awvalid <= 1;
               m_axi_wdata <= cpu_mem_wdata; m_axi_wstrb_r <= cpu_mem_wstrb; m_axi_wvalid <= 1;
