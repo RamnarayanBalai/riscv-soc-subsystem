@@ -5,7 +5,8 @@ MEMORY {
 
 SECTIONS {
     .text : {
-        *(.text)
+        *(.text.start)
+        *(.text*)
         *(.rodata*)
     } > ROM
 

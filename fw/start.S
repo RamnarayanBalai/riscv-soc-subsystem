@@ -1,4 +1,4 @@
-.section .text
+.section .text.start
 .global _start
 _start:
     /* Set up stack pointer (SRAM top is 0x000100FC) */
