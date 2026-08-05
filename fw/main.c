@@ -5,6 +5,7 @@
 #define UART_ST (*((volatile uint32_t*)0x10000008))
 
 void uart_putc(char c) {
+    while (UART_ST & 1);
     UART_TX = c;
 }
 

@@ -32,7 +32,8 @@ module uart_axi (
 
       if (arvalid && !arready && !rvalid) begin
         arready <= 1;
-        rdata <= 32'h0; // Read logic simplified
+        if (araddr[7:0] == 8'h08) rdata <= {31'b0, tx_busy};
+        else rdata <= 32'h0;
         rvalid <= 1;
       end else begin
         arready <= 0;
