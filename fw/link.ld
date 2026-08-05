@@ -8,10 +8,13 @@ SECTIONS {
         *(.text.start)
         *(.text*)
         *(.rodata*)
+        *(.srodata*)
     } > ROM
 
     .data : {
         *(.data*)
+        *(.sdata*)
         *(.bss*)
+        *(.sbss*)
     } > SRAM
 }
