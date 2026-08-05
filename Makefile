@@ -3,6 +3,7 @@ TB = tb
 FW = fw
 
 all: soc
+.PHONY: all fw soc synth clean
 
 fw:
 	$(MAKE) -C $(FW)
