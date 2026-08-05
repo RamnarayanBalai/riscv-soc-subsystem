@@ -12,37 +12,46 @@ The SoC is built around the **PicoRV32** processor core, implementing the RV32IM
 | Peripheral | Base Address | Size/Width | Description |
 | :--- | :--- | :--- | :--- |
 | **Boot ROM** | `0x0000_0000` | 8 KB (2048 x 32-bit) | Contains startup code (`start.S`) and main firmware (`main.c`). Ignored on write. |
-| **SRAM** | `0x0001_0000` | 256 Bytes (64 x 32-bit)| Scratchpad memory for variables and the stack. Stack initialized at `0x0001_00FC`. |
+| **SRAM** | `0x0001_0000` | 256 Bytes (64 x 32-bit)| Scratchpad memory for variables and the stack. Stack initialized at top: `0x0001_00FC`. |
 | **UART (TX)** | `0x1000_0000` | 8-bit Write | Writing to offset `0x00` queues a character into the UART Transmit buffer. |
+| **UART (RX)** | `0x1000_0004` | 8-bit Read | Reading from offset `0x04` returns the received character. |
 | **UART (Status)**| `0x1000_0008` | 1-bit Read | Reading from offset `0x08` returns the `tx_busy` flag (1 = Busy, 0 = Ready). |
 
-### Interconnect
-The system utilizes a **Custom AXI4-Lite Interconnect** with a Single Master (the CPU AXI Bridge) and 3 Slaves (ROM, SRAM, UART). The CPU bridge implements an FSM to translate native PicoRV32 memory interface signals (`mem_valid`, `mem_ready`, `mem_wstrb`) into standard AXI4-Lite read/write channels (`AW`, `W`, `B`, `AR`, `R`).
+### AXI-Lite Interconnect details
+The system utilizes a **Custom AXI4-Lite Interconnect** with a Single Master (the CPU AXI Bridge) and 3 Slaves (ROM, SRAM, UART). The CPU bridge implements an FSM (Finite State Machine) with 5 states (`IDLE`, `WR_AW`, `WR_B`, `RD_AR`, `RD_R`) to accurately translate native PicoRV32 memory interface signals (`mem_valid`, `mem_ready`, `mem_wstrb`) into standard AXI4-Lite read/write channels (`AW`, `W`, `B`, `AR`, `R`).
 
 ---
 
-## 2. Firmware Build Process (`make fw`)
+## 2. Firmware Operation (`make fw`)
 
 The firmware is bare-metal C and Assembly. Running `make fw` triggers the following internal operations:
 
-1. **Compilation:** The RISC-V GCC cross-compiler (`riscv64-unknown-elf-gcc` or `riscv32-unknown-elf-gcc`) compiles `main.c` and `start.S`.
+1. **Compilation:** The RISC-V GCC cross-compiler (`riscv64-unknown-elf-gcc`) compiles `main.c` and `start.S`.
    * **Flags Used:** `-Os` (optimize for size), `-ffreestanding` (no standard OS environment), `-nostdlib` (do not link C standard library), `-mabi=ilp32 -march=rv32imc` (target 32-bit RISC-V with IMC extensions).
-2. **Linking:** The custom linker script (`link.ld`) is invoked via `-T link.ld`. It places `.text.start` exactly at `0x0000_0000` so the CPU fetches the boot code on reset. It maps standard sections (`.text`, `.rodata`, `.srodata`) into the ROM block, and maps read-write sections (`.data`, `.sdata`, `.bss`) into the SRAM block starting at `0x0001_0000`.
-3. **Binary Extraction:** `riscv64-unknown-elf-objcopy -O binary` strips out ELF metadata, leaving raw machine code (`firmware.bin`).
-4. **Hex Generation:** A Python script reads the raw binary and formats it into a hexadecimal string array (`rtl/rom.hex`), padding bytes to match the 32-bit width of the Verilog `$readmemh` instruction.
+2. **Boot Assembly (`start.S`):** Sets the Stack Pointer (`sp`) directly to `0x0001_00FC` (top of SRAM) using the `li sp, 0x000100FC` instruction, jumps to `main`, and provides a safety infinite loop `1: j 1b` upon exit.
+3. **Application Logic (`main.c`):** 
+   * A polling `uart_putc` function loops `while (UART_ST & 1);` waiting for `tx_busy` to fall, then writes the character to `UART_TX`.
+   * The main routine executes a `for` loop exactly **10 times**, sending the string `"Hello Ramnarayan\n"` to UART. 
+   * It then sends a final `"PING"` string and gracefully returns `0`.
+4. **Linking (`link.ld`):** The custom linker script invokes via `-T link.ld`. It places `.text.start` exactly at `0x0000_0000`. It places standard sections (`.text`, `.rodata`, `.srodata`) into the ROM block, and read-write sections (`.data`, `.sdata`, `.bss`) into the SRAM block starting at `0x0001_0000`.
+5. **Binary Extraction:** `riscv64-unknown-elf-objcopy -O binary` strips out ELF metadata, leaving raw machine code (`firmware.bin`).
+6. **Hex Generation:** A Python script reads the raw binary and formats it into a hexadecimal string array (`rtl/rom.hex`), padding bytes to match the 32-bit width of the Verilog `$readmemh` instruction.
 
 ---
 
-## 3. RTL Simulation (`make soc`)
+## 3. RTL Simulation & Testbench (`make soc`)
 
 To verify the logic, the SoC is simulated using **Verilator**. Running `make soc` executes the following:
 
 1. **Dependency Check:** Make automatically calls `make fw` to ensure `rtl/rom.hex` is up-to-date.
 2. **Verilation:** The Verilator compiler parses the Verilog files, optimizing them into a high-performance C++ cycle-accurate model.
-   * **Flags Used:** `--timing` (enables Verilog delay support), `--trace` (enables VCD waveform dumping), and various `-Wno-*` flags to suppress generic linter warnings on the PicoRV32 core.
+   * **Flags Used:** `--timing` (enables Verilog `#10` delay support), `--trace` (enables `.vcd` waveform dumping), and various `-Wno-*` flags to suppress generic linter warnings on the PicoRV32 core (such as `DECLFILENAME`, `PINMISSING`, `UNUSEDSIGNAL`).
 3. **Compilation:** `g++` compiles the Verilated C++ model into an executable binary (`Vtb_top`).
-4. **Execution:** The executable is launched with `./obj_dir/Vtb_top +romhex=rtl/rom.hex`. The testbench (`tb/tb_top.v`) loads the hex file into the ROM array and pulses the reset line.
-5. **Expected Result:** The CPU boots, initializes the stack, and executes `main()`. A Verilog monitor block captures UART TX toggles and prints "Hello Ramnarayan" continuously to the terminal.
+4. **Execution Testbench (`tb/tb_top.v`):** 
+   * The executable is launched with `./obj_dir/Vtb_top +romhex=rtl/rom.hex`. 
+   * The testbench drives the clock (`clk`) with a **20 ns period (50 MHz)** via `always #10 clk = ~clk;`. 
+   * It holds `reset` high for 100 ns, releases it, and allows the simulation to run for exactly `30,000,000` time units (~30 milliseconds) to allow the firmware to finish execution.
+   * **UART Monitor:** A structural UART RX monitor in the testbench samples the `uart_tx` line at a Baud Rate of **115,200**. This is calculated using `localparam CLKS_PER_BIT = 434;` (`50,000,000 Hz / 115200 Baud ≈ 434 cycles`). It prints captured characters directly to the console using `$write` and `$fflush()`.
 
 ---
 
@@ -51,23 +60,24 @@ To verify the logic, the SoC is simulated using **Verilator**. Running `make soc
 The design is fully prepared for tape-out using the OpenLane physical design flow targeting the **SkyWater 130nm** PDK. 
 
 ### Running the Flow
-Inside an OpenLane environment, you can generate the GDSII layout by executing:
+Inside an OpenLane `proot` shell environment, generate the GDSII layout by executing:
 ```bash
-./flow.tcl -design /path/to/riscv-soc-subsystem/openlane_design -overwrite
+./flow.tcl -design /home/lab-user/riscv-soc-subsystem/openlane_design -overwrite
 ```
 
-### Important Configuration Numbers (`config.json`)
-* **Clock Constraints:** The target `CLOCK_PERIOD` is **20 ns (50 MHz)** on the `clk` port.
-* **Die Area:** Fixed absolute sizing `DIE_AREA` of **1000 µm x 1000 µm** (1 sq. mm).
-* **Utilization:** `FP_CORE_UTIL` is set to **35%**, and `PL_TARGET_DENSITY` is **0.65** (65%), providing breathing room for the moderately large PicoRV32 core to route without severe congestion.
-* **CTS (Clock Tree Synthesis):** Max Fanout is **8**, Max Transition is **1.5 ns**, Max Capacitance is **0.5 pF**. Clock buffers used are standard Sky130 cells (`sky130_fd_sc_hd__clkbuf_4`, `8`, and `16`).
-* **I/O Pin Placement:** Handled by `pin_order.cfg` which assigns pins to specific macro edges (North: `clk`, South: `reset`, East: `uart_tx`, West: `uart_rx`).
-
 ### Synthesis Results (`make synth` or OpenLane Step 1)
-When Yosys synthesizes the design (`yosys -D SYNTHESIS`), the approximate gate count is:
-* Total SoC Cells: **~18,909**
+When Yosys synthesizes the design (`yosys -D SYNTHESIS`), the approximate gate count generated is:
+* Total SoC Standard Cells: **~18,909**
 * PicoRV32 Core Cells: **~9,945** (incorporating the heavy DIV and MUL coprocessor blocks)
 * SRAM Array Cells: **~6,376** (Synthesized as an array of D Flip-Flops since it's only 256 bytes)
+
+### Important Configuration Parameters (`config.json`)
+* **Clock Constraints:** Target `CLOCK_PERIOD` is **20 ns** (50 MHz) on the `clk` port.
+* **Die Area:** Fixed absolute sizing `DIE_AREA` of **1000 µm x 1000 µm** (1 sq. mm).
+* **Utilization:** `FP_CORE_UTIL` is set to **35%**, and `PL_TARGET_DENSITY` is **0.65** (65%), providing breathing room for the moderately large PicoRV32 core to route without severe congestion.
+* **CTS (Clock Tree Synthesis):** Max Fanout is **8**, Max Transition is **1.5 ns**, Max Capacitance is **0.5 pF**. Clock buffers used are standard Sky130 cells (`sky130_fd_sc_hd__clkbuf_4`, `sky130_fd_sc_hd__clkbuf_8`, and `sky130_fd_sc_hd__clkbuf_16`).
+* **Routing/Antenna:** Uses `DIODE_ON_PORTS="both"` and `RUN_HEURISTIC_DIODE_INSERTION=1` for antenna protections, and a 600 µm max wire length (`PL_RESIZER_MAX_WIRE_LENGTH`).
+* **I/O Pin Placement (`pin_order.cfg`):** Assigns `clk` to North (`#N`), `reset` to South (`#S`), `uart_tx` to East (`#E`), and `uart_rx` to West (`#W`).
 
 ---
 
@@ -89,7 +99,7 @@ During the development and integration of this SoC, several deeply nested bugs s
 
 ### 4. Empty ROM during OpenLane Synthesis
 * **Bug:** In `rom.v`, the `$readmemh` instruction was wrapped in an `` `ifndef SYNTHESIS `` block. During OpenLane execution, Yosys completely ignored the firmware, synthesizing a completely empty 8KB ROM filled with zeroes. This would result in a manufactured chip that did nothing.
-* **Fix:** The `ifndef SYNTHESIS` block was replaced. To bypass a bug in OpenLane's `VERILOG_DEFINES` parsing (which stripped string quotes from macro arguments), the absolute path to the hex file was strictly hardcoded into the Verilog using an `` `ifdef SYNTHESIS `` block specifically for the physical design run.
+* **Fix:** To bypass a bug in OpenLane's `VERILOG_DEFINES` parsing (which stripped string quotes from macro arguments), the absolute path to the hex file was strictly hardcoded into the Verilog using an `` `ifdef SYNTHESIS `` block specifically for the physical design run (`initial $readmemh("/home/lab-user/riscv-soc-subsystem/rtl/rom.hex", mem);`).
 
 ### 5. Sky130 Standard Cell Naming Convensions (STA Error)
 * **Bug:** OpenLane failed during Step 2 (Static Timing Analysis) complaining that cell `sky130_fd_sc_hd_clkbuf_16` could not be found.
