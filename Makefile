@@ -16,7 +16,15 @@ synth:
 	yosys -D SYNTHESIS -p 'synth -top top' $(RTL)/picorv32.v $(RTL)/top.v $(RTL)/axi_lite_interconnect.v $(RTL)/axi_decoder.v $(RTL)/rom.v $(RTL)/sram.v $(RTL)/uart_axi.v $(RTL)/uart_tx.v $(RTL)/uart_rx.v
 
 run_flow:
-	cd openlane_design && openlane --interactive -file flow_commands.tcl
+	@echo "================================================================"
+	@echo "To run OpenLane in this Virtual Lab, please run the following:"
+	@echo "1. Start the OpenLane shell:"
+	@echo "   openlane shell"
+	@echo "2. Inside the shell, run the automated flow:"
+	@echo "   ./flow.tcl -design /home/lab-user/riscv-soc-subsystem/openlane_design"
+	@echo "   -- OR for interactive mode --"
+	@echo "   ./flow.tcl -interactive -file /home/lab-user/riscv-soc-subsystem/openlane_design/flow_commands.tcl"
+	@echo "================================================================"
 
 pull:
 	git fetch origin
